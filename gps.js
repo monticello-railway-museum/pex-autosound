@@ -8,6 +8,8 @@ const readline = require('readline');
 
 const turf = require('@turf/turf');
 
+const log = fs.openSync(`gps-${(new Date()).toISOString()}.log`, 'w');
+
 const polarPathCollection = JSON.parse(fs.readFileSync('pex-path.json'));
 const polarPath = polarPathCollection.features[0];
 
@@ -16,16 +18,22 @@ const rl = readline.createInterface({
 });
 
 rl.on('line', (line) => {
+    if (line)
+        fs.writeSync(log, `${line}\n`);
     // console.log(line);
     gps.update(line);
 });
 
+const frontTrainOffset = 442;
 const frontCarsOffset = 352;
 const rearCarsOffset = -30;
+const rearTrainOffset = -326;
+
+const wolfDelay = 160;
 
 const triggerLocs = {
     stationStop: [ [ -88.570424, 40.026757 ], -5.5 ],
-    wolvesAnnouncement: [ [ -88.562763, 40.044799 ], 0 ],
+    wolves: [ [ -88.562763, 40.044799 ], 0 ],
     ironHorsePlace: [ [ -88.559919, 40.054210 ], 0 ],
     northPoleAnnouncement: [ [ -88.559084, 40.055055 ], 0 ],
     santaAnnouncement: [ [ -88.558263, 40.055765 ], 0 ],
@@ -42,28 +50,17 @@ for (let locKey in triggerLocs) {
 
 const triggers = {
     stationStop: [ triggerDistances.stationStop, 0 ],
-    wolvesTriggerFrontCars: [ triggerDistances.wolvesAnnouncement, frontCarsOffset ],
-    wolvesTriggerRearCars: [ triggerDistances.wolvesAnnouncement, rearCarsOffset ],
-    santaMusicStart: [ triggerDistances.ironHorsePlace, 350 ],
+    wolvesTriggerFrontCars: [ triggerDistances.wolves, wolfDelay + frontCarsOffset ],
+    wolvesTriggerRearCars: [ triggerDistances.wolves, wolfDelay + rearCarsOffset ],
+    santaMusicStart: [ triggerDistances.ironHorsePlace, frontTrainOffset + 350 ],
     npTriggerFrontCars: [ triggerDistances.northPoleAnnouncement, frontCarsOffset ],
     santaTriggerFrontCars: [ triggerDistances.santaAnnouncement, frontCarsOffset ],
     npTriggerRearCars: [ triggerDistances.northPoleAnnouncement, rearCarsOffset ],
     santaTriggerRearCars: [ triggerDistances.santaAnnouncement, rearCarsOffset ],
     npStop: [ triggerDistances.northPoleStop, 0 ],
-    npMusicStart: [ triggerDistances.northPoleStop, -30 ],
+    npMusicStart: [ triggerDistances.northPoleStop, -15 ],
 };
 
-const triggerLats = {
-    wolfTriggerFrontCars: 40.043450,
-    wolfTriggerRearCars: 40.044468,
-    npTriggerFrontCars: 40.054284,
-    santaTriggerFrontCars: 40.055037,
-    npTriggerRearCars: 40.055120,
-    santaTriggerRearCars: 40.055821,
-    npMusicStart: 40.056652,
-};
-
-const lat370ft = Math.abs(triggerLats.wolfTriggerRearCars - triggerLats.wolfTriggerFrontCars);
 
 const pad = 25;
 
@@ -101,16 +98,9 @@ gps.on('data', (parsed) => {
         console.log('speed'.padEnd(pad),
                     mph.toFixed(2).toString().padStart(10),
                     ftPerSec.toFixed(2).toString().padStart(10));
+        console.log('altitude'.padEnd(pad), (state.alt * 100 / 2.54 / 12).toFixed(2).toString().padStart(10));
         console.log('');
         if (gps.state.lat) {
-            for (let prop in triggerLats) {
-                triggerLat = triggerLats[prop];
-                const fakeFeet = (triggerLat - gps.state.lat) / lat370ft * 370;
-                console.log(prop.padEnd(pad), fakeFeet.toFixed(1).toString().padStart(10));
-            }
-
-            console.log('');
-
             const point = turf.point([gps.state.lon, gps.state.lat]);
             const snapped = turf.nearestPointOnLine(polarPath, point, { units: 'feet' });
             const curDistance = snapped.properties.location;
@@ -141,3 +131,24 @@ gps.on('data', (parsed) => {
 // wolf trigger point = 140 + 442 - 90 = 492 ft
 
 // 370 ft = 21 seconds @ 12 mph
+
+// const triggerLats = {
+//     wolfTriggerFrontCars: 40.043450,
+//     wolfTriggerRearCars: 40.044468,
+//     npTriggerFrontCars: 40.054284,
+//     santaTriggerFrontCars: 40.055037,
+//     npTriggerRearCars: 40.055120,
+//     santaTriggerRearCars: 40.055821,
+//     npMusicStart: 40.056652,
+// };
+
+// const lat370ft = Math.abs(triggerLats.wolfTriggerRearCars - triggerLats.wolfTriggerFrontCars);
+
+//             for (let prop in triggerLats) {
+//                 triggerLat = triggerLats[prop];
+//                 const fakeFeet = (triggerLat - gps.state.lat) / lat370ft * 370;
+//                 console.log(prop.padEnd(pad), fakeFeet.toFixed(1).toString().padStart(10));
+//             }
+
+//             console.log('');
+
