@@ -1,0 +1,18 @@
+{
+  "devDependencies": {
+    "@types/node": "^12.12.8",
+    "prettier": "^1.19.1",
+    "ts-node": "^8.5.2",
+    "typescript": "^3.7.2"
+  },
+  "dependencies": {
+    "@turf/turf": "^5.1.6",
+    "@types/lodash": "^4.14.149",
+    "gps": "^0.5.3",
+    "lodash": "^4.17.15",
+    "moment": "^2.24.0",
+    "printf": "^0.5.2",
+    "sox": "^0.1.0",
+    "typed-emitter": "^0.2.0"
+  }
+}
