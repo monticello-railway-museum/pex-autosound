@@ -7,7 +7,9 @@
   },
   "dependencies": {
     "@turf/turf": "^5.1.6",
+    "@types/blessed": "^0.1.14",
     "@types/lodash": "^4.14.149",
+    "blessed": "^0.1.81",
     "gps": "^0.5.3",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",

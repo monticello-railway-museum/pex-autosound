@@ -1169,10 +1169,22 @@
     "@turf/invariant" "^5.1.5"
     d3-voronoi "1.1.2"
 
+"@types/blessed@^0.1.14":
+  version "0.1.14"
+  resolved "https://registry.yarnpkg.com/@types/blessed/-/blessed-0.1.14.tgz#0744d383bcee43cd607d580e60bca4b4279933e6"
+  integrity sha512-35F5irGQMNzIoQ1v64Se8Ct2JgstX8XRfhMW4dieBDzMhq6H+0ugt+9tp6BsNkNOnefyM3MVbecHgS0AKHHd7A==
+  dependencies:
+    "@types/node" "*"
+
 "@types/lodash@^4.14.149":
   version "4.14.149"
   resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.149.tgz#1342d63d948c6062838fbf961012f74d4e638440"
   integrity sha512-ijGqzZt/b7BfzcK9vTrS6MFljQRPn5BFWOx8oE0GYxribu6uV+aA9zZuXI1zc/etK9E8nrgdoF2+LgUw7+9tJQ==
+
+"@types/node@*":
+  version "12.12.14"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.12.14.tgz#1c1d6e3c75dba466e0326948d56e8bd72a1903d2"
+  integrity sha512-u/SJDyXwuihpwjXy7hOOghagLEV1KdAST6syfnOk6QZAMzZuWZqXy5aYYZbh8Jdpd4escVFP0MvftHNDb9pruA==
 
 "@types/node@^12.12.8":
   version "12.12.8"
@@ -1188,6 +1200,11 @@ batch@~0.3.2:
   version "0.3.2"
   resolved "https://registry.yarnpkg.com/batch/-/batch-0.3.2.tgz#8f802c1358be2b33535f8808e0a23c9f0075733b"
   integrity sha1-j4AsE1i+KzNTX4gI4KI8nwB1czs=
+
+blessed@^0.1.81:
+  version "0.1.81"
+  resolved "https://registry.yarnpkg.com/blessed/-/blessed-0.1.81.tgz#f962d687ec2c369570ae71af843256e6d0ca1129"
+  integrity sha1-+WLWh+wsNpVwrnGvhDJW5tDKESk=
 
 buffer-from@^1.0.0:
   version "1.1.1"
