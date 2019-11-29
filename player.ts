@@ -21,7 +21,7 @@ class Player {
 }
 
 const mpvOptions: string[] = [
-    //'--audio-device=pulse/alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo',
+    '--audio-device=pulse/alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo',
 ]
 
 export function play(fileNames: string[], volume: number = 80) {

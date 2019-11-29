@@ -45,9 +45,9 @@ function formatDuration(duration: number) {
     return printf('%02d:%02d', Math.floor(duration / 60), duration % 60)
 }
 
-// const e = openGPS('/dev/ttyUSB0')
-const e = fakeGPS(process.argv[2], { interval: 1 })
-const { stdout } = process
+const e = openGPS('/dev/ttyUSB0')
+// const e = fakeGPS(process.argv[2], { interval: 1 })
+
 e.on('state', gpsState => {
     const o: string[] = []
     function out(fmt: string, ...args: any) {
@@ -94,8 +94,8 @@ e.on('state', gpsState => {
     screen.render()
 })
 
-const play = fakePlayer(getState)
-// const play = realPlay
+// const play = fakePlayer(getState)
+const play = realPlay
 
 function getState() {
     return new Promise<IGPSState>((resolve, _reject) => {
