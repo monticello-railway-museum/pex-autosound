@@ -25,49 +25,63 @@
 // }
 
 import { IGPSState, openGPS, fakeGPS } from './gps'
-import { play } from './player'
+import { play as realPlay, fakePlayer } from './player'
 import moment from 'moment'
-import zip from 'lodash/zip'
-const sox = require('sox')
+import { states, withStateAsync } from './state'
+import printf from 'printf'
 
-const e = openGPS('/dev/ttyUSB0')
-// const e = fakeGPS(process.argv[2], {interval: 1})
-e.on('state', state => {
-    console.log(state)
-})
-
-// interface IAppState {
-//     gpsState: IGPSState | null
-//     tasks: object[]
-// }
-
-// const appState: IAppState = { gpsState: null, tasks: [] }
-
-async function identify(fileName: string) {
-    return new Promise((resolve, reject) => {
-        sox.identify(fileName, (err: any, results: any) => {
-            if (err) reject(err)
-            resolve(results)
-        })
-    })
+function formatDuration(duration: number) {
+    return printf('%02d:%02d', Math.floor(duration / 60), duration % 60)
 }
 
-// async function play(fileNames: string[]) {
-//     const infos: any[] = await Promise.all(fileNames.map(identify))
-//     let state = await getState()
-//     for (let [fileName, info] of zip(fileNames, infos)) {
-//         const finish = moment(state.time).add(info.duration * 1000)
-//         console.log(
-//             `${fileName} start ${moment(state.time).format()} finish ${finish.format()}`,
-//         )
-//         while (moment(state.time).isBefore(finish)) {
-//             console.log(`${fileName} now ${moment(state.time).format()} finish ${finish.format()}`)
-//             state = await getState()
-//         }
-//         console.log(`${fileName} finish ${finish.format()}`)
-//     }
-//     return state
-// }
+// const e = openGPS('/dev/ttyUSB0')
+const e = fakeGPS(process.argv[2], { interval: 200 })
+const { stdout } = process
+e.on('state', gpsState => {
+    stdout.write('\x1b[2J\x1b[H')
+    const mph = gpsState.speed
+    const fps = (mph * 5280) / 3600
+    printf(stdout, '%25s %s\n', 'time', gpsState.time.toLocaleTimeString())
+    printf(stdout, '%25s %10.2f %10.2f\n', 'speed', mph, fps)
+    printf(stdout, '%25s %10s\n', 'moving', gpsState.moving)
+    printf(stdout, '\n')
+    for (let [name, distance] of Object.entries(gpsState.triggerDistances)) {
+        const timeUntil = distance / fps
+        if (gpsState.moving) {
+            printf(stdout, '%25s %10.1f %10.1f\n', name, distance, timeUntil)
+        } else {
+            printf(stdout, '%25s %10.1f\n', name, distance)
+        }
+    }
+    printf(stdout, '\n')
+    for (let state of states) {
+        if (state.playing) {
+            const idx = state.playlist.indexOf(state.playing)
+            printf(
+                stdout,
+                'Playing [%d/%d]: %s\n',
+                idx + 1,
+                state.playlist.length,
+                state.playing,
+            )
+            const pct = state.position / state.duration
+            printf(
+                stdout,
+                '  (%s / %s / %s)  |%s|\n',
+                formatDuration(state.position),
+                formatDuration(state.duration),
+                formatDuration(state.duration - state.position),
+                ''.padEnd(Math.round(pct * 50), '-').padEnd(50),
+            )
+        } else {
+            console.log(state)
+        }
+        printf(stdout, '\n')
+    }
+})
+
+//const play = fakePlayer(getState)
+const play = realPlay
 
 function getState() {
     return new Promise<IGPSState>((resolve, _reject) => {
@@ -76,29 +90,35 @@ function getState() {
 }
 
 async function waitForMoving(moving: boolean) {
-    while (true) {
-        const state = await getState()
-        if (state.moving == moving) return state
-    }
+    return await withStateAsync({ waitForMoving: moving }, async () => {
+        while (true) {
+            const state = await getState()
+            if (state.moving == moving) return state
+        }
+    })
 }
 
 async function waitForTrigger(trigger: string) {
-    while (true) {
-        const state = await getState()
-        if (state.triggerDistances[trigger] <= 0) return state
-    }
+    return await withStateAsync({ waitForTrigger: trigger }, async () => {
+        while (true) {
+            const state = await getState()
+            if (state.triggerDistances[trigger] <= 0) return state
+        }
+    })
 }
 
 async function waitForTime(time: string) {
-    let state = await getState()
-    let now = moment(state.time)
-    let today = now.format('YYYY-MM-DD')
-    let target = moment(`${today} ${time}`)
-    while (now.isBefore(target)) {
-        state = await getState()
-        now = moment(state.time)
-    }
-    return state
+    return await withStateAsync({ waitForTime: time }, async () => {
+        let state = await getState()
+        let now = moment(state.time)
+        let today = now.format('YYYY-MM-DD')
+        let target = moment(`${today} ${time}`)
+        while (now.isBefore(target)) {
+            state = await getState()
+            now = moment(state.time)
+        }
+        return state
+    })
 }
 
 async function sleep(msec: number) {
@@ -142,7 +162,6 @@ const allTimes: { [x: string]: { [x: string]: string } } = {
 
 async function program() {
     let state = await getState()
-    console.log(state)
     let start = moment(state.time)
     let startTime = start.format('HH:mm:ss')
     let times = allTimes['17:00:00']
@@ -151,14 +170,11 @@ async function program() {
     if (startTime > '20:00:00') throw new Error('done!')
 
     for (let [eventTime, event] of Object.entries(times)) {
-        console.log(startTime, [eventTime, event])
         if (startTime > eventTime) continue
         await waitForTime(eventTime)
         if (event === 'start') break
         play([event])
     }
-
-    console.log('time', state)
 
     let playing = play([
         'music/c01 - When Christmas Comes to Town.wav',
@@ -174,39 +190,39 @@ async function program() {
         'music/c07 - (Book Reading Short).wav',
     ])
 
-    console.log(await waitForTrigger('wolvesTriggerFrontCars'))
+    await waitForTrigger('wolvesTriggerFrontCars')
     play(['music/a07Fa - Hungry wolves.wav', 'music/a07Fb - Glacier Gulch.wav'], 100)
-    console.log(await waitForTrigger('wolvesTriggerRearCars'))
+    await waitForTrigger('wolvesTriggerRearCars')
     play(['music/a07Ra - Hungry wolves.wav', 'music/a07Rb - Glacier Gulch.wav'], 100)
 
-    await playing
+    await playing.wait()
 
-    console.log(await waitForTrigger('santaMusicStart'))
+    await waitForTrigger('santaMusicStart')
 
     playing = play(['music/c08 - Santa Claus is Coming to Town.wav'])
 
-    console.log(await waitForTrigger('npTriggerFrontCars'))
+    await waitForTrigger('npTriggerFrontCars')
     play(['music/a08Fa - As we round the bend (North Pole).wav'], 100)
-    console.log(await waitForTrigger('santaTriggerFrontCars'))
+    await waitForTrigger('santaTriggerFrontCars')
     play(['music/a08Fb - The elves are out this evening.wav'], 100)
-    console.log(await waitForTrigger('npTriggerRearCars'))
+    await waitForTrigger('npTriggerRearCars')
     play(['music/a08Ra - As we round the bend (North Pole).wav'], 100)
-    console.log(await waitForTrigger('santaTriggerRearCars'))
+    await waitForTrigger('santaTriggerRearCars')
     play(['music/a08Rb - The elves are out this evening.wav'], 100)
 
-    await playing
+    await playing.wait()
 
-    console.log(await waitForMoving(false))
-    await play(['music/c08a - Brief station stop.wav'])
-    console.log(await waitForMoving(true))
-    console.log(await waitForTrigger('npMusicStart'))
+    await waitForMoving(false)
+    await play(['music/c08a - Brief station stop.wav']).wait()
+    await waitForMoving(true)
+    await waitForTrigger('npMusicStart')
     await play([
         'music/c09 - Believe (1).wav',
         'music/c10 - We Wish You a Merry Christmas (1).wav',
-    ])
-    console.log(await waitForMoving(false))
-    await play(['music/c10a - Thousands of caribou.wav'])
-    console.log(await waitForMoving(true))
+    ]).wait()
+    await waitForMoving(false)
+    await play(['music/c10a - Thousands of caribou.wav']).wait()
+    await waitForMoving(true)
     await play([
         'music/c11 - Rudolph the Red-Nosed Reindeer.wav',
         'music/c12 - Frosty the Snowman.wav',
@@ -219,7 +235,7 @@ async function program() {
         "music/c17 - Rockin' Around the Christmas Tree.wav",
         'music/c17a - (AIM) Closing comments.wav',
         'music/c18 - Suite from The Polar Express.wav',
-    ])
+    ]).wait()
 }
 
 ;(async () => {
