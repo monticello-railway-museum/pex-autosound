@@ -86,6 +86,7 @@ export function openGPS(fileName: string, options: IOptions = {}) {
         gps.update(line)
     })
 
+    let time: Date | undefined = undefined
     let avgSpeedSamples: number[] = []
     function avgSpeed(speed: number) {
         if (avgSpeedSamples.length >= 10) {
@@ -102,6 +103,12 @@ export function openGPS(fileName: string, options: IOptions = {}) {
     const emitter = new EventEmitter() as TypedEmitter<GPSEmitterEvents>
 
     gps.on('data', parsed => {
+        if (gps.state.time && gps.state.time.getFullYear() < 2015) {
+            gps.state.time = moment(gps.state.time).add(1024, 'weeks').toDate()
+        }
+        if (parsed.type === 'RMC') {
+            time = gps.state.time
+        }
         if (parsed.type === 'VTG') {
             // for (let i = 0; i < 20; ++i) {
             //     console.log('');
@@ -112,7 +119,8 @@ export function openGPS(fileName: string, options: IOptions = {}) {
                 state.time == null ||
                 state.alt == null ||
                 state.lat == null ||
-                state.lon == null
+                state.lon == null ||
+                time == null
             )
                 return
             const speed = avgSpeed(state.speed) * 0.6214
@@ -128,13 +136,8 @@ export function openGPS(fileName: string, options: IOptions = {}) {
                 ([distance, offset]) => distance - offset - curDistance,
             )
 
-            const today = moment()
-            const timeStr = `${today.format('YYYY-MM-DD')} ${moment(state.time).format(
-                'HH:mm:ss.SS',
-            )}`
-
             emitter.emit('state', {
-                time: moment(timeStr).toDate(),
+                time,
                 speed,
                 moving,
                 triggerDistances,
