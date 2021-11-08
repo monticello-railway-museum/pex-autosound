@@ -45,8 +45,8 @@ function formatDuration(duration: number) {
     return printf('%02d:%02d', Math.floor(duration / 60), duration % 60)
 }
 
-const e = openGPS('/dev/ttyUSB0')
-// const e = fakeGPS(process.argv[2], { interval: 1 })
+// const e = openGPS('/dev/ttyUSB0')
+const e = fakeGPS(process.argv[2], { interval: 10 })
 
 e.on('state', gpsState => {
     const o: string[] = []
@@ -94,8 +94,8 @@ e.on('state', gpsState => {
     screen.render()
 })
 
-// const play = fakePlayer(getState)
-const play = realPlay
+const play = fakePlayer(getState)
+// const play = realPlay
 
 function getState() {
     return new Promise<IGPSState>((resolve, _reject) => {
@@ -247,7 +247,7 @@ async function program() {
         'music/c16 - Holly Jolly Christmas.wav',
         'music/c16a - And now for our final number.wav',
         "music/c17 - Rockin' Around the Christmas Tree.wav",
-        'music/c17a - (AIM) Closing comments.wav',
+        'music/c17a - (DDS) Closing comments.wav',
         'music/c18 - Suite from The Polar Express.wav',
     ]).wait()
 }

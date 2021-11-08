@@ -5,6 +5,7 @@ import * as turf from '@turf/turf'
 import EventEmitter from 'events'
 import mapValues from 'lodash/mapValues'
 import TypedEmitter from 'typed-emitter'
+import Denque from 'denque'
 import moment from 'moment'
 
 const polarPathCollection = JSON.parse(
@@ -52,13 +53,16 @@ const triggers: { [x: string]: [number, number] } = {
     npMusicStart: [triggerDistances.northPoleStop, -15],
 }
 
+console.log(triggerDistances)
+console.log(triggers)
+
 const pad = 25
 
 // 1mi  5280ft 1hr
 // hr   1mi    3600s
 
 interface IOptions {
-    hardware?: boolean
+    log?: boolean
 }
 
 export interface IGPSState {
@@ -73,28 +77,32 @@ interface GPSEmitterEvents {
 }
 
 export function openGPS(fileName: string, options: IOptions = {}) {
+    return openGPSStream(fs.createReadStream(fileName), options);
+}
+
+export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
     const gps = new GPS()
     const log = fs.openSync(
-        options.hardware ? `gps-${new Date().toISOString()}.log` : '/dev/null',
+        options.log ? `gps-${new Date().toISOString()}.log` : '/dev/null',
         'w',
     )
-    const stream = fs.createReadStream(fileName)
     const rl = readline.createInterface(stream)
 
     rl.on('line', line => {
-        if (line) fs.writeSync(log, `${line}\n`)
+        if (line)
+            fs.writeSync(log, `${line}\n`)
         gps.update(line)
     })
 
     let time: Date | undefined = undefined
     let avgSpeedSamples: number[] = []
     function avgSpeed(speed: number) {
-        if (avgSpeedSamples.length >= 10) {
+        if (avgSpeedSamples.length >= 10)
             avgSpeedSamples = avgSpeedSamples.slice(1)
-        }
         avgSpeedSamples.push(speed)
         let sum = 0
-        for (let spd of avgSpeedSamples) sum += spd
+        for (let spd of avgSpeedSamples)
+            sum += spd
         return sum / avgSpeedSamples.length
     }
 
@@ -153,21 +161,25 @@ interface IFakeGPSOptions {
 }
 
 export function fakeGPS(fileName: string, options: IFakeGPSOptions = {}) {
-    const rawEmitter = openGPS(fileName)
+    const stream = fs.createReadStream(fileName)
+    const rawEmitter = openGPSStream(stream, {...options, log: false})
 
     const emitter = new EventEmitter() as TypedEmitter<GPSEmitterEvents>
 
-    const states: IGPSState[] = []
+    const states = new Denque<IGPSState>()
     rawEmitter.on('state', state => {
         states.push(state)
+        if (states.length > 10)
+            stream.pause()
     })
-    let stateIdx = 0
 
     setInterval(() => {
-        if (stateIdx < states.length) {
-            const state = states[stateIdx++]
+        console.log(states.length)
+        const state = states.shift()
+        if (state)
             emitter.emit('state', state)
-        }
+        if (states.length <= 10)
+            stream.resume()
     }, options.interval || 1)
 
     return emitter

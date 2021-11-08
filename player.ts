@@ -13,7 +13,10 @@ interface IPlayerState {
 }
 
 class Player {
-    constructor(public state: IPlayerState, public endPromise: Promise<void>) {}
+    constructor(
+        public state: IPlayerState,
+        public endPromise: Promise<void>,
+    ) {}
     async wait() {
         const state = { waitForSongFinish: this.state.playlist.slice(-1)[0] }
         return await withStateAsync(state, async () => await this.endPromise)
