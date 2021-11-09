@@ -1,9 +1,12 @@
 import * as child_process from 'child_process'
-import { withState, withStateAsync } from './state'
+import { promisify } from 'util'
+const execFile = promisify(child_process.execFile)
+import { withStateAsync } from './state'
 import { IGPSState } from './gps'
-const sox = require('sox')
 import zip from 'lodash/zip'
 import moment from 'moment'
+
+import { identify } from './identify'
 
 interface IPlayerState {
     playlist: string[]
@@ -12,22 +15,30 @@ interface IPlayerState {
     duration: number
 }
 
-class Player {
-    constructor(
-        public state: IPlayerState,
-        public endPromise: Promise<void>,
-    ) {}
+export class Player {
+    constructor(public state: IPlayerState, public endPromise: Promise<void>) {}
     async wait() {
         const state = { waitForSongFinish: this.state.playlist.slice(-1)[0] }
         return await withStateAsync(state, async () => await this.endPromise)
     }
 }
 
+interface IPlayerOptions {
+    volume?: number
+    speed?: number
+    mpvOptions?: string[]
+}
+
 const mpvOptions: string[] = [
-    '--audio-device=pulse/alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo',
+    //'--audio-device=pulse/alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo',
 ]
 
-export function play(fileNames: string[], volume: number = 80) {
+export function play(fileNames: string[], options: IPlayerOptions = {}) {
+    const speed = options.speed ?? 1.0
+    const volume = options.volume ?? 80
+    let mpvOptions = options.mpvOptions ?? []
+    if (speed !== 1.0) mpvOptions = [...mpvOptions, `--speed=${speed}`]
+    mpvOptions = [...mpvOptions, `--volume=${volume}`]
     const state: IPlayerState = {
         playlist: fileNames,
         playing: fileNames[0],
@@ -38,13 +49,9 @@ export function play(fileNames: string[], volume: number = 80) {
         state,
         withStateAsync(
             state,
-            async () =>
-                await new Promise<void>((resolve, _reject) => {
-                    const kid = child_process.spawn('mpv', [
-                        ...mpvOptions,
-                        `--volume=${volume}`,
-                        ...fileNames,
-                    ])
+            () =>
+                new Promise<void>((resolve, reject) => {
+                    const kid = child_process.spawn('mpv', [...mpvOptions, ...fileNames])
                     // kid.stdout.pipe(process.stdout);
                     // kid.stderr.pipe(process.stderr);
 
@@ -65,19 +72,11 @@ export function play(fileNames: string[], volume: number = 80) {
                         }
                         // console.log('got stderr:\n', data.toString())
                     })
+                    kid.on('error', reject)
                     kid.on('exit', (_code, _signal) => resolve())
                 }),
         ),
     )
-}
-
-async function identify(fileName: string) {
-    return new Promise((resolve, reject) => {
-        sox.identify(fileName, (err: any, results: any) => {
-            if (err) reject(err)
-            resolve(results)
-        })
-    })
 }
 
 export function fakePlayer(getState: () => Promise<IGPSState>) {

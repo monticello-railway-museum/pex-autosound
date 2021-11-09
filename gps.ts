@@ -77,7 +77,7 @@ interface GPSEmitterEvents {
 }
 
 export function openGPS(fileName: string, options: IOptions = {}) {
-    return openGPSStream(fs.createReadStream(fileName), options);
+    return openGPSStream(fs.createReadStream(fileName), options)
 }
 
 export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
@@ -88,21 +88,18 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
     )
     const rl = readline.createInterface(stream)
 
-    rl.on('line', line => {
-        if (line)
-            fs.writeSync(log, `${line}\n`)
+    rl.on('line', (line) => {
+        if (line) fs.writeSync(log, `${line}\n`)
         gps.update(line)
     })
 
     let time: Date | undefined = undefined
     let avgSpeedSamples: number[] = []
     function avgSpeed(speed: number) {
-        if (avgSpeedSamples.length >= 10)
-            avgSpeedSamples = avgSpeedSamples.slice(1)
+        if (avgSpeedSamples.length >= 10) avgSpeedSamples = avgSpeedSamples.slice(1)
         avgSpeedSamples.push(speed)
         let sum = 0
-        for (let spd of avgSpeedSamples)
-            sum += spd
+        for (let spd of avgSpeedSamples) sum += spd
         return sum / avgSpeedSamples.length
     }
 
@@ -110,7 +107,7 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
 
     const emitter = new EventEmitter() as TypedEmitter<GPSEmitterEvents>
 
-    gps.on('data', parsed => {
+    gps.on('data', (parsed) => {
         if (gps.state.time && gps.state.time.getFullYear() < 2015) {
             gps.state.time = moment(gps.state.time).add(1024, 'weeks').toDate()
         }
@@ -157,29 +154,44 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
 }
 
 interface IFakeGPSOptions {
+    speed?: number
     interval?: number
 }
 
 export function fakeGPS(fileName: string, options: IFakeGPSOptions = {}) {
+    const speed = options.speed ?? 1.0
+
+    let firstStateTime: Date | undefined
+    let firstNowTime: Date | undefined
+
     const stream = fs.createReadStream(fileName)
-    const rawEmitter = openGPSStream(stream, {...options, log: false})
+    const rawEmitter = openGPSStream(stream, { ...options, log: false })
 
     const emitter = new EventEmitter() as TypedEmitter<GPSEmitterEvents>
 
     const states = new Denque<IGPSState>()
-    rawEmitter.on('state', state => {
+    rawEmitter.on('state', (state) => {
         states.push(state)
-        if (states.length > 10)
-            stream.pause()
+        if (states.length > 10) stream.pause()
     })
 
     setInterval(() => {
-        console.log(states.length)
-        const state = states.shift()
-        if (state)
-            emitter.emit('state', state)
-        if (states.length <= 10)
-            stream.resume()
+        const now = new Date()
+        const state = states.peekFront()
+        if (state) {
+            if (!firstStateTime || !firstNowTime) {
+                firstStateTime = state.time
+                firstNowTime = now
+            }
+            const stateDelta = state.time.getTime() - firstStateTime.getTime()
+            const nowDelta = now.getTime() - firstNowTime.getTime()
+
+            if (stateDelta <= nowDelta * speed) {
+                emitter.emit('state', state)
+                states.shift()
+            }
+        }
+        if (states.length <= 10) stream.resume()
     }, options.interval || 1)
 
     return emitter

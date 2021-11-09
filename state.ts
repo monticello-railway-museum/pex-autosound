@@ -5,7 +5,7 @@ export function addState(state: object) {
 }
 
 export function removeState(state: object) {
-    states = states.filter(s => s !== state)
+    states = states.filter((s) => s !== state)
 }
 
 export function withState<T>(state: object, fn: () => T) {

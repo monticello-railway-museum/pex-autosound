@@ -36,7 +36,7 @@ const screen = blessed.screen()
 const text = blessed.box({
     width: '100%',
     length: '100%',
-    content: ''
+    content: '',
 })
 
 screen.append(text)
@@ -46,9 +46,18 @@ function formatDuration(duration: number) {
 }
 
 // const e = openGPS('/dev/ttyUSB0')
-const e = fakeGPS(process.argv[2], { interval: 10 })
+const e = fakeGPS(process.argv[2], { interval: 10, speed: 1.0 })
 
-e.on('state', gpsState => {
+function getState() {
+    return new Promise<IGPSState>((resolve, _reject) => {
+        e.once('state', resolve)
+    })
+}
+
+// const play = fakePlayer(getState)
+const play = (fileName: string[], volume?: number) => realPlay(fileName, {volume})
+
+e.on('state', (gpsState) => {
     const o: string[] = []
     function out(fmt: string, ...args: any) {
         o.push(printf(fmt, ...args))
@@ -56,27 +65,22 @@ e.on('state', gpsState => {
     const mph = gpsState.speed
     const fps = (mph * 5280) / 3600
     out('%25s %s\n', 'time', gpsState.time.toLocaleTimeString())
-    out('%25s %10.2f %10.2f\n', 'speed', mph, fps)
+    out('%25s %10.2f MPH  %10.2f ft/s\n', 'speed', mph, fps)
     out('%25s %10s\n', 'moving', gpsState.moving)
     out('\n')
     for (let [name, distance] of Object.entries(gpsState.triggerDistances)) {
         const timeUntil = distance / fps
         if (gpsState.moving) {
-            out('%25s %10.1f %10.1f\n', name, distance, timeUntil)
+            out('%25s %10.1f ft  %10.1f s\n', name, distance, timeUntil)
         } else {
-            out('%25s %10.1f\n', name, distance)
+            out('%25s %10.1f ft\n', name, distance)
         }
     }
     out('\n')
     for (let state of states) {
         if (state.playing) {
             const idx = state.playlist.indexOf(state.playing)
-            out(
-                'Playing [%d/%d]: %s\n',
-                idx + 1,
-                state.playlist.length,
-                state.playing,
-            )
+            out('Playing [%d/%d]: %s\n', idx + 1, state.playlist.length, state.playing)
             const pct = state.position / state.duration
             out(
                 '  (%s / %s / %s)  |%s|\n',
@@ -86,22 +90,13 @@ e.on('state', gpsState => {
                 ''.padEnd(Math.round(pct * 50), '-').padEnd(50),
             )
         } else {
-            out("%s", util.inspect(state))
+            out('%s', util.inspect(state))
         }
         out('\n')
     }
     text.content = o.join('')
     screen.render()
 })
-
-const play = fakePlayer(getState)
-// const play = realPlay
-
-function getState() {
-    return new Promise<IGPSState>((resolve, _reject) => {
-        e.once('state', resolve)
-    })
-}
 
 async function waitForMoving(moving: boolean) {
     return await withStateAsync({ waitForMoving: moving }, async () => {
