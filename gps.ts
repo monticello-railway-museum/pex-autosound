@@ -53,9 +53,6 @@ const triggers: { [x: string]: [number, number] } = {
     npMusicStart: [triggerDistances.northPoleStop, -15],
 }
 
-console.log(triggerDistances)
-console.log(triggers)
-
 const pad = 25
 
 // 1mi  5280ft 1hr
@@ -72,7 +69,7 @@ export interface IGPSState {
     triggerDistances: { [x: string]: number }
 }
 
-interface GPSEmitterEvents {
+export interface GPSEmitterEvents {
     state: (state: IGPSState) => void
 }
 
@@ -192,7 +189,7 @@ export function fakeGPS(fileName: string, options: IFakeGPSOptions = {}) {
             }
         }
         if (states.length <= 10) stream.resume()
-    }, options.interval || 1)
+    }, options.interval || 10)
 
     return emitter
 }

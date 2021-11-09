@@ -71,6 +71,7 @@ const allTimes: { [x: string]: { [x: string]: string } } = {
 export async function polarProgram(
     getState: () => Promise<IGPSState>,
     play: (fileNames: string[], volume?: number) => Player,
+    studio: string,
 ) {
     let state = await getState()
     let start = moment(state.time)
@@ -144,7 +145,7 @@ export async function polarProgram(
         'music/c16 - Holly Jolly Christmas.wav',
         'music/c16a - And now for our final number.wav',
         "music/c17 - Rockin' Around the Christmas Tree.wav",
-        'music/c17a - (DDS) Closing comments.wav',
+        `music/c17a - (${studio}) Closing comments.wav`,
         'music/c18 - Suite from The Polar Express.wav',
     ]).wait()
 }

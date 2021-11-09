@@ -31,6 +31,7 @@ import { states } from './state'
 import { polarProgram } from './polar-program'
 import printf from 'printf'
 import blessed from 'blessed'
+
 const screen = blessed.screen()
 
 const text = blessed.box({
@@ -98,7 +99,7 @@ e.on('state', (gpsState) => {
     screen.render()
 })
 ;(async () => {
-    while (true) await polarProgram(getState, play)
+    while (true) await polarProgram(getState, play, 'DDS')
 })()
 
 // ;[
