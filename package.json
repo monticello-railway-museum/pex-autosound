@@ -11,6 +11,7 @@
     "@types/lodash": "^4.14.149",
     "blessed": "^0.1.81",
     "commander": "^8.3.0",
+    "date-fns": "^2.25.0",
     "denque": "^2.0.1",
     "gps": "^0.6.0",
     "lodash": "^4.17.15",

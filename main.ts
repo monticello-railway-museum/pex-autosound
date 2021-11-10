@@ -7,19 +7,35 @@ import { polarProgram } from './polar-program'
 import printf from 'printf'
 import blessed from 'blessed'
 import TypedEmitter from 'typed-emitter'
+import * as dateFns from 'date-fns'
 
 function validateStudio(studio: string) {
     if (studio === 'DDS' || studio === 'AIM') return studio
     throw new Error(`Unknown studio ${studio}`)
 }
 
+function parseTimes(times: string) {
+    if (!times) return []
+    const splitTimes = times.split(',')
+    for (let time of splitTimes) {
+        const parsed = dateFns.parse(time, 'H:m', new Date())
+        if (!dateFns.isValid(parsed)) throw new Error(`Invalid time ${time}`)
+    }
+    return splitTimes
+}
+
 program
     .requiredOption('--studio [name]', 'Select dance studio (DDS, AIM)', validateStudio)
+    .option('--start-times [times]', 'Set start times', parseTimes, [
+        '17:00',
+        '18:30',
+        '20:00',
+    ])
     .option('--gps-device [name]', 'Set GPS device', '/dev/ttyUSB0')
     .option('--fake-gps [name]', 'Replay GPS from [name]')
     .option('--fake-player', 'Use fake player')
     .option('--speed [speed]', 'Adjust playback/replay speed', parseFloat, 1.0)
-    .option('--audio-device', 'Add audio device to mpv calls')
+    .option('--audio-device [name]', 'Add audio device to mpv calls')
     .parse(process.argv)
 
 const options = program.opts()
@@ -59,7 +75,8 @@ if (options.audioDevice) mpvOptions.push(`--audio-device=${options.audioDevice}`
 
 let play = options.fakePlayer
     ? fakePlayer(getState)
-    : (fileName: string[], volume?: number) => realPlay(fileName, { volume, mpvOptions, speed: options.speed })
+    : (fileName: string[], volume?: number) =>
+          realPlay(fileName, { volume, mpvOptions, speed: options.speed })
 
 gpsEmitter.on('state', (gpsState) => {
     const o: string[] = []
@@ -68,7 +85,7 @@ gpsEmitter.on('state', (gpsState) => {
     }
     const mph = gpsState.speed
     const fps = (mph * 5280) / 3600
-    out('%25s %s\n', 'time', gpsState.time.toLocaleTimeString())
+    out('%25s %s\n', 'time', dateFns.format(gpsState.time, 'yyyy-MM-dd HH:mm:ss'))
     out('%25s %10.2f MPH  %10.2f ft/s\n', 'speed', mph, fps)
     out('%25s %10s\n', 'moving', gpsState.moving)
     out('\n')
@@ -93,6 +110,13 @@ gpsEmitter.on('state', (gpsState) => {
                 formatDuration(state.duration - state.position),
                 ''.padEnd(Math.round(pct * 50), '-').padEnd(50),
             )
+        } else if (state.waitForDate) {
+            out(
+                '%s',
+                util.inspect({
+                    waitForDate: dateFns.format(state.waitForDate, 'yyyy-MM-dd HH:mm:ss'),
+                }),
+            )
         } else {
             out('%s', util.inspect(state))
         }
@@ -101,9 +125,14 @@ gpsEmitter.on('state', (gpsState) => {
     text.content = o.join('')
     screen.render()
 })
+
+// blah
 ;(async () => {
     try {
-        while (true) await polarProgram(getState, play, options.studio)
+        for (let time of options.startTimes) {
+            await polarProgram(time, getState, play, options.studio)
+        }
+        states.push({ programFinished: true })
     } catch (e) {
         console.error(e)
         process.exit(1)

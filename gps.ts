@@ -6,7 +6,7 @@ import EventEmitter from 'events'
 import mapValues from 'lodash/mapValues'
 import TypedEmitter from 'typed-emitter'
 import Denque from 'denque'
-import moment from 'moment'
+import * as dateFns from 'date-fns'
 
 const polarPathCollection = JSON.parse(
     fs.readFileSync('pex-path.json', { encoding: 'utf-8' }),
@@ -106,7 +106,7 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
 
     gps.on('data', (parsed) => {
         if (gps.state.time && gps.state.time.getFullYear() < 2015) {
-            gps.state.time = moment(gps.state.time).add(1024, 'weeks').toDate()
+            gps.state.time = dateFns.add(gps.state.time, { weeks: 1024 })
         }
         if (parsed.type === 'RMC') {
             time = gps.state.time

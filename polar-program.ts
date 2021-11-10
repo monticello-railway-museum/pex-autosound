@@ -1,7 +1,7 @@
 import { IGPSState } from './gps'
-import moment from 'moment'
 import { withStateAsync } from './state'
 import { Player } from './player'
+import * as dateFns from 'date-fns'
 
 async function waitForMoving(getState: () => Promise<IGPSState>, moving: boolean) {
     return await withStateAsync({ waitForMoving: moving }, async () => {
@@ -21,77 +21,71 @@ async function waitForTrigger(getState: () => Promise<IGPSState>, trigger: strin
     })
 }
 
-async function waitForTime(getState: () => Promise<IGPSState>, time: string) {
-    return await withStateAsync({ waitForTime: time }, async () => {
+async function waitForDate(getState: () => Promise<IGPSState>, target: Date) {
+    return await withStateAsync({ waitForDate: target }, async () => {
         let state = await getState()
-        let now = moment(state.time)
-        let today = now.format('YYYY-MM-DD')
-        let target = moment(`${today} ${time}`)
-        while (now.isBefore(target)) {
+        while (dateFns.isBefore(state.time, target)) {
             state = await getState()
-            now = moment(state.time)
         }
         return state
     })
 }
 
-const allTimes: { [x: string]: { [x: string]: string } } = {
-    '17:00:00': {
-        '16:29:00': 'music/b29 - 29,59 (20m) boarding countdown.wav',
-        '16:34:00': 'music/b34 - 34,04 (15m) boarding countdown.wav',
-        '16:39:00': 'music/b39 - 39,09 (10m) boarding countdown.wav',
-        '16:44:00': 'music/b44 - 44,14 (5m) boarding countdown.wav',
-        '16:46:00': 'music/b46 - 46,16 (3m) boarding countdown.wav',
-        '16:47:00': 'music/b47 - 47,17 (2m) boarding countdown.wav',
-        '16:48:00': 'music/b48 - 48,18 (1m) boarding countdown.wav',
-        '16:49:00': 'start',
-    },
-    '18:30:00': {
-        '17:59:00': 'music/b29 - 29,59 (20m) boarding countdown.wav',
-        '18:04:00': 'music/b34 - 34,04 (15m) boarding countdown.wav',
-        '18:09:00': 'music/b39 - 39,09 (10m) boarding countdown.wav',
-        '18:14:00': 'music/b44 - 44,14 (5m) boarding countdown.wav',
-        '18:16:00': 'music/b46 - 46,16 (3m) boarding countdown.wav',
-        '18:17:00': 'music/b47 - 47,17 (2m) boarding countdown.wav',
-        '18:18:00': 'music/b48 - 48,18 (1m) boarding countdown.wav',
-        '18:19:00': 'start',
-    },
-    '20:00:00': {
-        '19:29:00': 'music/b29 - 29,59 (20m) boarding countdown.wav',
-        '19:34:00': 'music/b34 - 34,04 (15m) boarding countdown.wav',
-        '19:39:00': 'music/b39 - 39,09 (10m) boarding countdown.wav',
-        '19:44:00': 'music/b44 - 44,14 (5m) boarding countdown.wav',
-        '19:46:00': 'music/b46 - 46,16 (3m) boarding countdown.wav',
-        '19:47:00': 'music/b47 - 47,17 (2m) boarding countdown.wav',
-        '19:48:00': 'music/b48 - 48,18 (1m) boarding countdown.wav',
-        '19:49:00': 'start',
-    },
-}
+const boardingAnnouncements: [number, string][] = [
+    [20, 'music/b29 - 29,59 (20m) boarding countdown.wav'],
+    [15, 'music/b34 - 34,04 (15m) boarding countdown.wav'],
+    [10, 'music/b39 - 39,09 (10m) boarding countdown.wav'],
+    [5, 'music/b44 - 44,14 (5m) boarding countdown.wav'],
+    [3, 'music/b46 - 46,16 (3m) boarding countdown.wav'],
+    [2, 'music/b47 - 47,17 (2m) boarding countdown.wav'],
+    [1, 'music/b48 - 48,18 (1m) boarding countdown.wav'],
+]
+
+const boardingSongs: [number, string][] = [
+    [253, 'music/c01 - When Christmas Comes to Town.wav'],
+    [159, 'music/c02 - Spirit of the Season.wav'],
+    [232, 'music/c03 - Seeing is Believing.wav'],
+]
 
 export async function polarProgram(
+    startTime: string,
     getState: () => Promise<IGPSState>,
     play: (fileNames: string[], volume?: number) => Player,
     studio: string,
 ) {
     let state = await getState()
-    let start = moment(state.time)
-    let startTime = start.format('HH:mm:ss')
-    let times = allTimes['17:00:00']
-    if (startTime > '17:00:00') times = allTimes['18:30:00']
-    if (startTime > '18:30:00') times = allTimes['20:00:00']
-    if (startTime > '20:00:00') throw new Error('done!')
+    const startDate = dateFns.parse(startTime, 'H:m', state.time)
+    const boardingStartDate = dateFns.sub(startDate, { minutes: 11 })
 
-    for (let [eventTime, event] of Object.entries(times)) {
-        if (startTime > eventTime) continue
-        await waitForTime(getState, eventTime)
-        if (event === 'start') break
-        play([event])
+    for (let [minutesBefore, file] of boardingAnnouncements) {
+        const announcementDate = dateFns.sub(boardingStartDate, {
+            minutes: minutesBefore,
+        })
+        if (dateFns.isAfter(state.time, announcementDate)) {
+            continue
+        }
+        state = await waitForDate(getState, announcementDate)
+        play([file])
     }
 
+    let adjustedStartDate = boardingStartDate
+    let boardingSongsToPlay = []
+    for (let [duration, file] of boardingSongs) {
+        if (dateFns.isAfter(state.time, adjustedStartDate)) {
+            adjustedStartDate = dateFns.add(adjustedStartDate, { seconds: duration })
+        } else {
+            boardingSongsToPlay.push(file)
+        }
+    }
+
+    if (dateFns.isAfter(state.time, dateFns.add(startDate, { minutes: 5 }))) {
+        // Too late, go to next show
+        return
+    }
+    await waitForDate(getState, adjustedStartDate)
+
     let playing = play([
-        'music/c01 - When Christmas Comes to Town.wav',
-        'music/c02 - Spirit of the Season.wav',
-        'music/c03 - Seeing is Believing.wav',
+        ...boardingSongsToPlay,
         'music/c04 - The Polar Express.wav',
         'music/c04a - Good evening and welcome aboard.wav',
         'music/c05 - Hot Chocolate (1).wav',
