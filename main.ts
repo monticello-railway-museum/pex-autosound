@@ -110,11 +110,11 @@ gpsEmitter.on('state', (gpsState) => {
                 formatDuration(state.duration - state.position),
                 ''.padEnd(Math.round(pct * 50), '-').padEnd(50),
             )
-        } else if (state.waitForDate) {
+        } else if (state.waitForTime) {
             out(
                 '%s',
                 util.inspect({
-                    waitForDate: dateFns.format(state.waitForDate, 'yyyy-MM-dd HH:mm:ss'),
+                    waitForTime: dateFns.format(state.waitForTime, 'yyyy-MM-dd HH:mm:ss'),
                 }),
             )
         } else {

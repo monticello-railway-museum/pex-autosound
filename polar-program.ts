@@ -21,8 +21,8 @@ async function waitForTrigger(getState: () => Promise<IGPSState>, trigger: strin
     })
 }
 
-async function waitForDate(getState: () => Promise<IGPSState>, target: Date) {
-    return await withStateAsync({ waitForDate: target }, async () => {
+async function waitForTime(getState: () => Promise<IGPSState>, target: Date) {
+    return await withStateAsync({ waitForTime: target }, async () => {
         let state = await getState()
         while (dateFns.isBefore(state.time, target)) {
             state = await getState()
@@ -64,7 +64,7 @@ export async function polarProgram(
         if (dateFns.isAfter(state.time, announcementDate)) {
             continue
         }
-        state = await waitForDate(getState, announcementDate)
+        state = await waitForTime(getState, announcementDate)
         play([file])
     }
 
@@ -82,7 +82,7 @@ export async function polarProgram(
         // Too late, go to next show
         return
     }
-    await waitForDate(getState, adjustedStartDate)
+    await waitForTime(getState, adjustedStartDate)
 
     let playing = play([
         ...boardingSongsToPlay,
