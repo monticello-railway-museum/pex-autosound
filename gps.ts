@@ -87,7 +87,11 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
 
     rl.on('line', (line) => {
         if (line) fs.writeSync(log, `${line}\n`)
-        gps.update(line)
+        try {
+            gps.update(line)
+        } catch (e) {
+            /* KLUDGE but barfing here does no one any good */
+        }
     })
 
     let time: Date | undefined = undefined
