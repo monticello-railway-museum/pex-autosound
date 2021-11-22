@@ -109,11 +109,12 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
     const emitter = new EventEmitter() as TypedEmitter<GPSEmitterEvents>
 
     gps.on('data', (parsed) => {
-        if (gps.state.time && gps.state.time.getFullYear() < 2015) {
-            gps.state.time = dateFns.add(gps.state.time, { weeks: 1024 })
-        }
         if (parsed.type === 'RMC') {
             time = gps.state.time
+            while (time && time.getFullYear() < 2015) {
+                const week = 7 * 24 * 60 * 60 * 1000
+                time = new Date(time.getTime() + 1024 * week)
+            }
         }
         if (parsed.type === 'VTG') {
             // for (let i = 0; i < 20; ++i) {
