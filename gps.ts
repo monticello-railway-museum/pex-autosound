@@ -192,7 +192,16 @@ export function fakeGPS(fileName: string, options: IFakeGPSOptions = {}) {
             }
             const stateDelta = state.time.getTime() - firstStateTime.getTime();
             const nowDelta = now.getTime() - firstNowTime.getTime();
-
+            const diff = stateDelta - nowDelta * speed;
+            if (diff > 100000) {
+                // handle time jumps
+                firstStateTime = new Date(state.time.getTime() - nowDelta * speed);
+            }
+            debugLog({
+                stateDelta,
+                nowDelta_x_Speed: nowDelta * speed,
+                diff: stateDelta - nowDelta * speed,
+            });
             if (stateDelta <= nowDelta * speed) {
                 emitter.emit('state', state);
                 states.shift();
