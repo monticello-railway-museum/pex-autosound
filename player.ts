@@ -6,6 +6,7 @@ import { IGPSState } from './gps';
 import zip from 'lodash/zip';
 import moment from 'moment';
 
+import { debugLog } from './debug';
 import { identify } from './identify';
 
 interface IPlayerState {
@@ -60,7 +61,7 @@ export function play(fileNames: string[], options: IPlayerOptions = {}) {
                         if (m) {
                             state.playing = m[1];
                         }
-                        // console.log('got stdout:\n', data.toString())
+                        // debugLog('got stdout:\n', data.toString())
                     });
                     kid.stderr.on('data', (data: Buffer) => {
                         const m = data
@@ -70,7 +71,7 @@ export function play(fileNames: string[], options: IPlayerOptions = {}) {
                             state.position = moment.duration(m[1]).asSeconds();
                             state.duration = moment.duration(m[2]).asSeconds();
                         }
-                        // console.log('got stderr:\n', data.toString())
+                        // debugLog('got stderr:\n', data.toString())
                     });
                     kid.on('error', reject);
                     kid.on('exit', (_code, _signal) => resolve());
@@ -81,6 +82,7 @@ export function play(fileNames: string[], options: IPlayerOptions = {}) {
 
 export function fakePlayer(getState: () => Promise<IGPSState>) {
     function play(fileNames: string[], _volume: number = 80) {
+        debugLog('fakePlayer play', fileNames);
         const pstate: IPlayerState = {
             playlist: fileNames,
             playing: fileNames[0],
@@ -90,30 +92,33 @@ export function fakePlayer(getState: () => Promise<IGPSState>) {
         return new Player(
             pstate,
             withStateAsync(pstate, async () => {
+                debugLog('fakePlayer withStateAsync');
                 const infos: any[] = await Promise.all(fileNames.map(identify));
                 let state = await getState();
+                debugLog('fakePlayer withStateAsync state=', state);
                 for (let [fileName, info] of zip(fileNames, infos)) {
                     const start = moment(state.time);
                     const finish = start.clone().add(info.duration * 1000);
                     pstate.playing = fileName!;
                     pstate.duration = info.duration;
-                    // console.log(
-                    //     `${fileName} start ${moment(
-                    //         state.time,
-                    //     ).format()} finish ${finish.format()}`,
-                    // )
+                    debugLog(
+                        `${fileName} start ${moment(
+                            state.time,
+                        ).format()} finish ${finish.format()}`,
+                    );
                     let now = moment(state.time);
                     while (now.isBefore(finish)) {
                         pstate.position = now.diff(start) / 1000;
-                        // console.log(
-                        //     `${fileName} now ${moment(
-                        //         state.time,
-                        //     ).format()} finish ${finish.format()}`,
-                        // )
+                        debugLog(
+                            `${fileName} now ${moment(
+                                state.time,
+                            ).format()} finish ${finish.format()}`,
+                        );
                         state = await getState();
+                        debugLog('fakePlayer withStateAsync state=', state);
                         now = moment(state.time);
                     }
-                    // console.log(`${fileName} finish ${finish.format()}`)
+                    debugLog(`${fileName} finish ${finish.format()}`);
                 }
             }),
         );

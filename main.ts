@@ -4,6 +4,7 @@ import { IGPSState, openGPS, fakeGPS, GPSEmitterEvents } from './gps';
 import { play as realPlay, fakePlayer } from './player';
 import { states } from './state';
 import { polarProgram } from './polar-program';
+import { setDebugEnable, debugLog } from './debug';
 import printf from 'printf';
 import blessed from 'blessed';
 import TypedEmitter from 'typed-emitter';
@@ -36,19 +37,29 @@ program
     .option('--fake-player', 'Use fake player')
     .option('--speed [speed]', 'Adjust playback/replay speed', parseFloat, 1.0)
     .option('--audio-device [name]', 'Add audio device to mpv calls')
+    .option('--debug', 'Debug mode')
     .parse(process.argv);
 
 const options = program.opts();
 
-const screen = blessed.screen();
+setDebugEnable(options.debug);
 
-const text = blessed.box({
-    width: '100%',
-    length: '100%',
-    content: '',
-});
 
-screen.append(text);
+let updateScreen = (output: string[]) => {};
+
+if (!options.debug) {
+    const screen = blessed.screen();
+    const text = blessed.box({
+        width: '100%',
+        length: '100%',
+        content: '',
+    });
+    screen.append(text);
+    updateScreen = (output: string[]) => {
+        text.content = output.join('');
+        screen.render();
+    };
+}
 
 function formatDuration(duration: number) {
     return printf('%02d:%02d', Math.floor(duration / 60), duration % 60);
@@ -79,6 +90,8 @@ let play = options.fakePlayer
           realPlay(fileName, { volume, mpvOptions, speed: options.speed });
 
 gpsEmitter.on('state', (gpsState) => {
+    debugLog(gpsState);
+    debugLog(states);
     const o: string[] = [];
     function out(fmt: string, ...args: any) {
         o.push(printf(fmt, ...args));
@@ -110,21 +123,29 @@ gpsEmitter.on('state', (gpsState) => {
                 formatDuration(state.duration - state.position),
                 ''.padEnd(Math.round(pct * 50), '-').padEnd(50),
             );
-        } else if (state.waitForTime) {
-            out(
-                '%s',
-                util.inspect({
-                    waitForTime: dateFns.format(state.waitForTime, 'yyyy-MM-dd HH:mm:ss'),
-                }),
-            );
         } else {
-            out('%s', util.inspect(state));
+            out('%s\n', util.inspect(formatDates(state)));
         }
         out('\n');
     }
-    text.content = o.join('');
-    screen.render();
+    if (options.debug) {
+        debugLog(o);
+        debugLog(states);
+    }
+    updateScreen(o);
 });
+
+function formatDates(state: { [k: string]: any }): { [k: string]: any } {
+    let out = {} as { [k: string]: any };
+    for (let k in state) {
+        if (state[k] instanceof Date) {
+            out[k] = dateFns.format(state[k], 'yyyy-MM-dd HH:mm:ss');
+        } else {
+            out[k] = state[k];
+        }
+    }
+    return out;
+}
 
 // blah
 (async () => {
@@ -134,6 +155,7 @@ gpsEmitter.on('state', (gpsState) => {
         }
         states.push({ programFinished: true });
     } catch (e) {
+        debugLog('WTF');
         console.error(e);
         process.exit(1);
     }

@@ -7,6 +7,7 @@ import mapValues from 'lodash/mapValues';
 import TypedEmitter from 'typed-emitter';
 import Denque from 'denque';
 import * as dateFns from 'date-fns';
+import { debugLog } from './debug';
 
 const polarPathCollection = JSON.parse(
     fs.readFileSync('pex-path.json', { encoding: 'utf-8' }),
@@ -84,12 +85,13 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
         'w',
     );
     const rl = readline.createInterface(stream);
-
     rl.on('line', (line) => {
+        debugLog('line', line);
         if (line) fs.writeSync(log, `${line}\n`);
         try {
             gps.update(line);
         } catch (e) {
+            debugLog('fuck', e);
             /* KLUDGE but barfing here does no one any good */
         }
     });
@@ -109,6 +111,7 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
     const emitter = new EventEmitter() as TypedEmitter<GPSEmitterEvents>;
 
     gps.on('data', (parsed) => {
+        debugLog('parsed', parsed);
         if (parsed.type === 'RMC') {
             time = gps.state.time;
             while (time && time.getFullYear() < 2015) {
@@ -118,7 +121,7 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
         }
         if (parsed.type === 'VTG') {
             // for (let i = 0; i < 20; ++i) {
-            //     console.log('');
+            //     debugLog('');
             // }
             const { state } = gps;
             if (
@@ -226,7 +229,7 @@ export function fakeGPS(fileName: string, options: IFakeGPSOptions = {}) {
 //             for (let prop in triggerLats) {
 //                 triggerLat = triggerLats[prop];
 //                 const fakeFeet = (triggerLat - gps.state.lat) / lat370ft * 370;
-//                 console.log(prop.padEnd(pad), fakeFeet.toFixed(1).toString().padStart(10));
+//                 debugLog(prop.padEnd(pad), fakeFeet.toFixed(1).toString().padStart(10));
 //             }
 
-//             console.log('');
+//             debugLog('');

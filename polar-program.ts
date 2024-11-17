@@ -1,6 +1,7 @@
 import { IGPSState } from './gps';
 import { withStateAsync } from './state';
 import { Player } from './player';
+import { debugLog } from './debug';
 import * as dateFns from 'date-fns';
 
 async function waitForMoving(getState: () => Promise<IGPSState>, moving: boolean) {
@@ -22,6 +23,7 @@ async function waitForTrigger(getState: () => Promise<IGPSState>, trigger: strin
 }
 
 async function waitForTime(getState: () => Promise<IGPSState>, target: Date) {
+    debugLog('waitForTime', target);
     return await withStateAsync({ waitForTime: target }, async () => {
         let state = await getState();
         while (dateFns.isBefore(state.time, target)) {
