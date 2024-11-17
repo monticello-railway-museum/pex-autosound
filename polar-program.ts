@@ -50,98 +50,105 @@ const boardingSongs: [number, string][] = [
 ];
 
 export async function polarProgram(
-    startTime: string,
+    startTime: Date,
     getState: () => Promise<IGPSState>,
     play: (fileNames: string[], volume?: number) => Player,
     studio: string,
 ) {
-    let state = await getState();
-    const startDate = dateFns.parse(startTime, 'H:m', state.time);
-    const boardingStartDate = dateFns.sub(startDate, { minutes: 11 });
+    await withStateAsync({ startTime, studio }, async () => {
+        debugLog('polarProgram', startTime, studio);
+        let state = await getState();
+        debugLog('post getstate', state);
+        const startDate = startTime;
+        const boardingStartDate = dateFns.sub(startDate, { minutes: 11 });
 
-    for (let [minutesBefore, file] of boardingAnnouncements) {
-        const announcementDate = dateFns.sub(boardingStartDate, {
-            minutes: minutesBefore,
-        });
-        if (dateFns.isAfter(state.time, announcementDate)) {
-            continue;
+        debugLog('boardingStartDate', boardingStartDate);
+        for (let [minutesBefore, file] of boardingAnnouncements) {
+            const announcementDate = dateFns.sub(boardingStartDate, {
+                minutes: minutesBefore,
+            });
+            if (dateFns.isAfter(state.time, announcementDate)) {
+                continue;
+            }
+            debugLog('announcementDate', announcementDate);
+            state = await waitForTime(getState, announcementDate);
+            play([file]);
         }
-        state = await waitForTime(getState, announcementDate);
-        play([file]);
-    }
 
-    let adjustedStartDate = boardingStartDate;
-    let boardingSongsToPlay = [];
-    for (let [duration, file] of boardingSongs) {
-        if (dateFns.isAfter(state.time, adjustedStartDate)) {
-            adjustedStartDate = dateFns.add(adjustedStartDate, { seconds: duration });
-        } else {
-            boardingSongsToPlay.push(file);
+        let adjustedStartDate = boardingStartDate;
+        let boardingSongsToPlay = [];
+        for (let [duration, file] of boardingSongs) {
+            if (dateFns.isAfter(state.time, adjustedStartDate)) {
+                adjustedStartDate = dateFns.add(adjustedStartDate, { seconds: duration });
+            } else {
+                boardingSongsToPlay.push(file);
+            }
         }
-    }
 
-    if (dateFns.isAfter(state.time, dateFns.add(startDate, { minutes: 5 }))) {
-        // Too late, go to next show
-        return;
-    }
-    await waitForTime(getState, adjustedStartDate);
+        debugLog(startDate, adjustedStartDate);
+        if (dateFns.isAfter(state.time, dateFns.add(startDate, { minutes: 5 }))) {
+            // Too late, go to next show
+            return;
+        }
+        await waitForTime(getState, adjustedStartDate);
 
-    let playing = play([
-        ...boardingSongsToPlay,
-        'music/c04 - The Polar Express.wav',
-        'music/c04a - Good evening and welcome aboard.wav',
-        'music/c05 - Hot Chocolate (1).wav',
-        'music/c05a - I dont think everybody has had hot chocolate yet.wav',
-        'music/c05b - 5s pause.wav',
-        'music/c06 - Hot Chocolate (2).wav',
-        'music/c06a - And now lets hear the story of the Polar Express.wav',
-        'music/c07 - (Book Reading Short).wav',
-    ]);
+        let playing = play([
+            ...boardingSongsToPlay,
+            'music/c04 - The Polar Express.wav',
+            'music/c04a - Good evening and welcome aboard.wav',
+            'music/c05 - Hot Chocolate (1).wav',
+            'music/c05a - I dont think everybody has had hot chocolate yet.wav',
+            'music/c05b - 5s pause.wav',
+            'music/c06 - Hot Chocolate (2).wav',
+            'music/c06a - And now lets hear the story of the Polar Express.wav',
+            'music/c07 - (Book Reading Short).wav',
+        ]);
 
-    await waitForTrigger(getState, 'wolvesTriggerFrontCars');
-    play(['music/a07Fa - Hungry wolves.wav', 'music/a07Fb - Glacier Gulch.wav'], 100);
-    await waitForTrigger(getState, 'wolvesTriggerRearCars');
-    play(['music/a07Ra - Hungry wolves.wav', 'music/a07Rb - Glacier Gulch.wav'], 100);
+        await waitForTrigger(getState, 'wolvesTriggerFrontCars');
+        play(['music/a07Fa - Hungry wolves.wav', 'music/a07Fb - Glacier Gulch.wav'], 100);
+        await waitForTrigger(getState, 'wolvesTriggerRearCars');
+        play(['music/a07Ra - Hungry wolves.wav', 'music/a07Rb - Glacier Gulch.wav'], 100);
 
-    await playing.wait();
+        await playing.wait();
 
-    await waitForTrigger(getState, 'santaMusicStart');
+        await waitForTrigger(getState, 'santaMusicStart');
 
-    playing = play(['music/c08 - Santa Claus is Coming to Town.wav']);
+        playing = play(['music/c08 - Santa Claus is Coming to Town.wav']);
 
-    await waitForTrigger(getState, 'npTriggerFrontCars');
-    play(['music/a08Fa - As we round the bend (North Pole).wav'], 100);
-    await waitForTrigger(getState, 'santaTriggerFrontCars');
-    play(['music/a08Fb - The elves are out this evening.wav'], 100);
-    await waitForTrigger(getState, 'npTriggerRearCars');
-    play(['music/a08Ra - As we round the bend (North Pole).wav'], 100);
-    await waitForTrigger(getState, 'santaTriggerRearCars');
-    play(['music/a08Rb - The elves are out this evening.wav'], 100);
+        await waitForTrigger(getState, 'npTriggerFrontCars');
+        play(['music/a08Fa - As we round the bend (North Pole).wav'], 100);
+        await waitForTrigger(getState, 'santaTriggerFrontCars');
+        play(['music/a08Fb - The elves are out this evening.wav'], 100);
+        await waitForTrigger(getState, 'npTriggerRearCars');
+        play(['music/a08Ra - As we round the bend (North Pole).wav'], 100);
+        await waitForTrigger(getState, 'santaTriggerRearCars');
+        play(['music/a08Rb - The elves are out this evening.wav'], 100);
 
-    await playing.wait();
+        await playing.wait();
 
-    await waitForMoving(getState, false);
-    await play(['music/c08a - Brief station stop.wav']).wait();
-    await waitForMoving(getState, true);
-    await waitForTrigger(getState, 'npMusicStart');
-    await play([
-        'music/c09 - Believe (1).wav',
-        'music/c10 - We Wish You a Merry Christmas (1).wav',
-    ]).wait();
-    await waitForMoving(getState, false);
-    await play(['music/c10a - Thousands of caribou.wav']).wait();
-    await waitForMoving(getState, true);
-    await play([
-        'music/c11 - Rudolph the Red-Nosed Reindeer.wav',
-        'music/c12 - Frosty the Snowman.wav',
-        'music/c13 - Believe (2).wav',
-        'music/c14 - We Wish You a Merry Christmas (2).wav',
-        'music/c14a - Please join us in singing.wav',
-        'music/c15 - Twelve Days of Christmas.wav',
-        'music/c16 - Holly Jolly Christmas.wav',
-        'music/c16a - And now for our final number.wav',
-        "music/c17 - Rockin' Around the Christmas Tree.wav",
-        `music/c17a - (${studio}) Closing comments.wav`,
-        'music/c18 - Suite from The Polar Express.wav',
-    ]).wait();
+        await waitForMoving(getState, false);
+        await play(['music/c08a - Brief station stop.wav']).wait();
+        await waitForMoving(getState, true);
+        await waitForTrigger(getState, 'npMusicStart');
+        await play([
+            'music/c09 - Believe (1).wav',
+            'music/c10 - We Wish You a Merry Christmas (1).wav',
+        ]).wait();
+        await waitForMoving(getState, false);
+        await play(['music/c10a - Thousands of caribou.wav']).wait();
+        await waitForMoving(getState, true);
+        await play([
+            'music/c11 - Rudolph the Red-Nosed Reindeer.wav',
+            'music/c12 - Frosty the Snowman.wav',
+            'music/c13 - Believe (2).wav',
+            'music/c14 - We Wish You a Merry Christmas (2).wav',
+            'music/c14a - Please join us in singing.wav',
+            'music/c15 - Twelve Days of Christmas.wav',
+            'music/c16 - Holly Jolly Christmas.wav',
+            'music/c16a - And now for our final number.wav',
+            "music/c17 - Rockin' Around the Christmas Tree.wav",
+            `music/c17a - (${studio}) Closing comments.wav`,
+            'music/c18 - Suite from The Polar Express.wav',
+        ]).wait();
+    });
 }

@@ -3,6 +3,7 @@ import util from 'util';
 import { IGPSState, openGPS, fakeGPS, GPSEmitterEvents } from './gps';
 import { play as realPlay, fakePlayer } from './player';
 import { states } from './state';
+import { schedule } from './schedule';
 import { polarProgram } from './polar-program';
 import { setDebugEnable, debugLog } from './debug';
 import printf from 'printf';
@@ -26,12 +27,9 @@ function parseTimes(times: string) {
 }
 
 program
-    .requiredOption('--studio [name]', 'Select dance studio (DDS, AIM)', validateStudio)
-    .option('--start-times [times]', 'Set start times', parseTimes, [
-        '17:00',
-        '18:30',
-        '20:00',
-    ])
+    .option('--year [year]', 'Select schedule year')
+    .option('--studio [name]', 'Select dance studio (DDS, AIM)', validateStudio)
+    .option('--start-times [times]', 'Set manual start times', parseTimes)
     .option('--gps-device [name]', 'Set GPS device', '/dev/ttyUSB0')
     .option('--fake-gps [name]', 'Replay GPS from [name]')
     .option('--fake-player', 'Use fake player')
@@ -44,6 +42,21 @@ const options = program.opts();
 
 setDebugEnable(options.debug);
 
+function* getTimespecs() {
+    if (options.startTimes) {
+        for (let time of options.startTimes) {
+            yield { time, studio: validateStudio(options.studio) };
+        }
+    } else {
+        let now = new Date();
+        let sched = schedule[options.year || now.getFullYear()];
+        for (let day of sched) {
+            for (let time of day.times) {
+                yield { time: new Date(`${day.date}T${time}`), studio: day.studio };
+            }
+        }
+    }
+}
 
 let updateScreen = (output: string[]) => {};
 
@@ -150,8 +163,9 @@ function formatDates(state: { [k: string]: any }): { [k: string]: any } {
 // blah
 (async () => {
     try {
-        for (let time of options.startTimes) {
-            await polarProgram(time, getState, play, options.studio);
+        for (let timespec of getTimespecs()) {
+            debugLog(timespec);
+            await polarProgram(timespec.time, getState, play, timespec.studio);
         }
         states.push({ programFinished: true });
     } catch (e) {
