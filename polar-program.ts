@@ -1,34 +1,34 @@
-import { IGPSState } from './gps'
-import { withStateAsync } from './state'
-import { Player } from './player'
-import * as dateFns from 'date-fns'
+import { IGPSState } from './gps';
+import { withStateAsync } from './state';
+import { Player } from './player';
+import * as dateFns from 'date-fns';
 
 async function waitForMoving(getState: () => Promise<IGPSState>, moving: boolean) {
     return await withStateAsync({ waitForMoving: moving }, async () => {
         while (true) {
-            const state = await getState()
-            if (state.moving == moving) return state
+            const state = await getState();
+            if (state.moving == moving) return state;
         }
-    })
+    });
 }
 
 async function waitForTrigger(getState: () => Promise<IGPSState>, trigger: string) {
     return await withStateAsync({ waitForTrigger: trigger }, async () => {
         while (true) {
-            const state = await getState()
-            if (state.triggerDistances[trigger] <= 0) return state
+            const state = await getState();
+            if (state.triggerDistances[trigger] <= 0) return state;
         }
-    })
+    });
 }
 
 async function waitForTime(getState: () => Promise<IGPSState>, target: Date) {
     return await withStateAsync({ waitForTime: target }, async () => {
-        let state = await getState()
+        let state = await getState();
         while (dateFns.isBefore(state.time, target)) {
-            state = await getState()
+            state = await getState();
         }
-        return state
-    })
+        return state;
+    });
 }
 
 const boardingAnnouncements: [number, string][] = [
@@ -39,13 +39,13 @@ const boardingAnnouncements: [number, string][] = [
     [3, 'music/b46 - 46,16 (3m) boarding countdown.wav'],
     [2, 'music/b47 - 47,17 (2m) boarding countdown.wav'],
     [1, 'music/b48 - 48,18 (1m) boarding countdown.wav'],
-]
+];
 
 const boardingSongs: [number, string][] = [
     [253, 'music/c01 - When Christmas Comes to Town.wav'],
     [159, 'music/c02 - Spirit of the Season.wav'],
     [232, 'music/c03 - Seeing is Believing.wav'],
-]
+];
 
 export async function polarProgram(
     startTime: string,
@@ -53,36 +53,36 @@ export async function polarProgram(
     play: (fileNames: string[], volume?: number) => Player,
     studio: string,
 ) {
-    let state = await getState()
-    const startDate = dateFns.parse(startTime, 'H:m', state.time)
-    const boardingStartDate = dateFns.sub(startDate, { minutes: 11 })
+    let state = await getState();
+    const startDate = dateFns.parse(startTime, 'H:m', state.time);
+    const boardingStartDate = dateFns.sub(startDate, { minutes: 11 });
 
     for (let [minutesBefore, file] of boardingAnnouncements) {
         const announcementDate = dateFns.sub(boardingStartDate, {
             minutes: minutesBefore,
-        })
+        });
         if (dateFns.isAfter(state.time, announcementDate)) {
-            continue
+            continue;
         }
-        state = await waitForTime(getState, announcementDate)
-        play([file])
+        state = await waitForTime(getState, announcementDate);
+        play([file]);
     }
 
-    let adjustedStartDate = boardingStartDate
-    let boardingSongsToPlay = []
+    let adjustedStartDate = boardingStartDate;
+    let boardingSongsToPlay = [];
     for (let [duration, file] of boardingSongs) {
         if (dateFns.isAfter(state.time, adjustedStartDate)) {
-            adjustedStartDate = dateFns.add(adjustedStartDate, { seconds: duration })
+            adjustedStartDate = dateFns.add(adjustedStartDate, { seconds: duration });
         } else {
-            boardingSongsToPlay.push(file)
+            boardingSongsToPlay.push(file);
         }
     }
 
     if (dateFns.isAfter(state.time, dateFns.add(startDate, { minutes: 5 }))) {
         // Too late, go to next show
-        return
+        return;
     }
-    await waitForTime(getState, adjustedStartDate)
+    await waitForTime(getState, adjustedStartDate);
 
     let playing = play([
         ...boardingSongsToPlay,
@@ -94,41 +94,41 @@ export async function polarProgram(
         'music/c06 - Hot Chocolate (2).wav',
         'music/c06a - And now lets hear the story of the Polar Express.wav',
         'music/c07 - (Book Reading Short).wav',
-    ])
+    ]);
 
-    await waitForTrigger(getState, 'wolvesTriggerFrontCars')
-    play(['music/a07Fa - Hungry wolves.wav', 'music/a07Fb - Glacier Gulch.wav'], 100)
-    await waitForTrigger(getState, 'wolvesTriggerRearCars')
-    play(['music/a07Ra - Hungry wolves.wav', 'music/a07Rb - Glacier Gulch.wav'], 100)
+    await waitForTrigger(getState, 'wolvesTriggerFrontCars');
+    play(['music/a07Fa - Hungry wolves.wav', 'music/a07Fb - Glacier Gulch.wav'], 100);
+    await waitForTrigger(getState, 'wolvesTriggerRearCars');
+    play(['music/a07Ra - Hungry wolves.wav', 'music/a07Rb - Glacier Gulch.wav'], 100);
 
-    await playing.wait()
+    await playing.wait();
 
-    await waitForTrigger(getState, 'santaMusicStart')
+    await waitForTrigger(getState, 'santaMusicStart');
 
-    playing = play(['music/c08 - Santa Claus is Coming to Town.wav'])
+    playing = play(['music/c08 - Santa Claus is Coming to Town.wav']);
 
-    await waitForTrigger(getState, 'npTriggerFrontCars')
-    play(['music/a08Fa - As we round the bend (North Pole).wav'], 100)
-    await waitForTrigger(getState, 'santaTriggerFrontCars')
-    play(['music/a08Fb - The elves are out this evening.wav'], 100)
-    await waitForTrigger(getState, 'npTriggerRearCars')
-    play(['music/a08Ra - As we round the bend (North Pole).wav'], 100)
-    await waitForTrigger(getState, 'santaTriggerRearCars')
-    play(['music/a08Rb - The elves are out this evening.wav'], 100)
+    await waitForTrigger(getState, 'npTriggerFrontCars');
+    play(['music/a08Fa - As we round the bend (North Pole).wav'], 100);
+    await waitForTrigger(getState, 'santaTriggerFrontCars');
+    play(['music/a08Fb - The elves are out this evening.wav'], 100);
+    await waitForTrigger(getState, 'npTriggerRearCars');
+    play(['music/a08Ra - As we round the bend (North Pole).wav'], 100);
+    await waitForTrigger(getState, 'santaTriggerRearCars');
+    play(['music/a08Rb - The elves are out this evening.wav'], 100);
 
-    await playing.wait()
+    await playing.wait();
 
-    await waitForMoving(getState, false)
-    await play(['music/c08a - Brief station stop.wav']).wait()
-    await waitForMoving(getState, true)
-    await waitForTrigger(getState, 'npMusicStart')
+    await waitForMoving(getState, false);
+    await play(['music/c08a - Brief station stop.wav']).wait();
+    await waitForMoving(getState, true);
+    await waitForTrigger(getState, 'npMusicStart');
     await play([
         'music/c09 - Believe (1).wav',
         'music/c10 - We Wish You a Merry Christmas (1).wav',
-    ]).wait()
-    await waitForMoving(getState, false)
-    await play(['music/c10a - Thousands of caribou.wav']).wait()
-    await waitForMoving(getState, true)
+    ]).wait();
+    await waitForMoving(getState, false);
+    await play(['music/c10a - Thousands of caribou.wav']).wait();
+    await waitForMoving(getState, true);
     await play([
         'music/c11 - Rudolph the Red-Nosed Reindeer.wav',
         'music/c12 - Frosty the Snowman.wav',
@@ -141,5 +141,5 @@ export async function polarProgram(
         "music/c17 - Rockin' Around the Christmas Tree.wav",
         `music/c17a - (${studio}) Closing comments.wav`,
         'music/c18 - Suite from The Polar Express.wav',
-    ]).wait()
+    ]).wait();
 }
