@@ -31,6 +31,7 @@ program
     .option('--studio [name]', 'Select dance studio (DDS, AIM)', validateStudio)
     .option('--start-times [times]', 'Set manual start times', parseTimes)
     .option('--gps-device [name]', 'Set GPS device', '/dev/ttyUSB0')
+    .option('--time-offset [seconds]', 'Set GPS time offset', (x) => parseFloat(x) * 1000)
     .option('--fake-gps [name]', 'Replay GPS from [name]')
     .option('--fake-player', 'Use fake player')
     .option('--speed [speed]', 'Adjust playback/replay speed', parseFloat, 1.0)
@@ -83,9 +84,13 @@ if (options.fakeGps) {
     gpsEmitter = fakeGPS(options.fakeGps, {
         interval: Math.min(10, 100 / options.speed),
         speed: options.speed,
+        timeOffset: options.timeOffset,
     });
 } else {
-    gpsEmitter = openGPS(options.gpsDevice, { log: true });
+    gpsEmitter = openGPS(options.gpsDevice, {
+        log: true,
+        timeOffset: options.timeOffset,
+    });
 }
 
 function getState() {

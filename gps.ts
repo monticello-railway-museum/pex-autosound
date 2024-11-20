@@ -61,6 +61,7 @@ const pad = 25;
 
 interface IOptions {
     log?: boolean;
+    timeOffset?: number;
 }
 
 export interface IGPSState {
@@ -112,18 +113,16 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
 
     gps.on('data', (parsed) => {
         debugLog('parsed', parsed);
-        if (parsed.type === 'RMC') {
-            time = gps.state.time;
+        if (parsed.type === 'RMC' && parsed.status === 'active') {
+            const { state } = gps;
+            time = state.time;
             while (time && time.getFullYear() < 2015) {
                 const week = 7 * 24 * 60 * 60 * 1000;
                 time = new Date(time.getTime() + 1024 * week);
             }
-        }
-        if (parsed.type === 'VTG') {
-            // for (let i = 0; i < 20; ++i) {
-            //     debugLog('');
-            // }
-            const { state } = gps;
+            if (time && options.timeOffset != null) {
+                time = new Date(time.getTime() + options.timeOffset);
+            }
             if (
                 state.speed == null ||
                 state.time == null ||
@@ -163,6 +162,7 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
 interface IFakeGPSOptions {
     speed?: number;
     interval?: number;
+    timeOffset?: number;
 }
 
 export function fakeGPS(fileName: string, options: IFakeGPSOptions = {}) {
