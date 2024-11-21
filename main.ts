@@ -19,11 +19,13 @@ function validateStudio(studio: string) {
 function parseTimes(times: string) {
     if (!times) return [];
     const splitTimes = times.split(',');
+    const splitDates = [];
     for (let time of splitTimes) {
         const parsed = dateFns.parse(time, 'H:m', new Date());
         if (!dateFns.isValid(parsed)) throw new Error(`Invalid time ${time}`);
+        splitDates.push(parsed);
     }
-    return splitTimes;
+    return splitDates;
 }
 
 program
