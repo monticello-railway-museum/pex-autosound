@@ -61,7 +61,9 @@ function* getTimespecs() {
     }
 }
 
-let updateScreen = (output: string[]) => {};
+let updateScreen = (output: string[]) => {
+    debugLog(output);
+};
 
 if (!options.debug) {
     const screen = blessed.screen();
@@ -72,10 +74,13 @@ if (!options.debug) {
     });
     screen.append(text);
     updateScreen = (output: string[]) => {
+        debugLog(output);
         text.content = output.join('');
         screen.render();
     };
 }
+
+updateScreen(['Waiting for valid GPS fix...']);
 
 function formatDuration(duration: number) {
     return printf('%02d:%02d', Math.floor(duration / 60), duration % 60);
@@ -148,10 +153,7 @@ gpsEmitter.on('state', (gpsState) => {
         }
         out('\n');
     }
-    if (options.debug) {
-        debugLog(o);
-        debugLog(states);
-    }
+    debugLog(states);
     updateScreen(o);
 });
 
