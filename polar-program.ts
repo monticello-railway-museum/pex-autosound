@@ -101,7 +101,8 @@ export async function polarProgram(
             'music/c05b - 5s pause.wav',
             'music/c06 - Hot Chocolate (2).wav',
             'music/c06a - And now lets hear the story of the Polar Express.wav',
-            'music/c07 - (Book Reading Short).wav',
+            //'music/c07 - (Book Reading Short).wav',
+            'music/CVA Story only.wav',
         ]);
 
         await waitForTrigger(getState, 'wolvesTriggerFrontCars');
@@ -141,6 +142,7 @@ export async function polarProgram(
             'music/c11 - Rudolph the Red-Nosed Reindeer.wav',
             'music/c12 - Frosty the Snowman.wav',
             'music/c13 - Believe (2).wav',
+            'music/Sleigh Ride.wav',
             'music/c14 - We Wish You a Merry Christmas (2).wav',
             'music/c14a - Please join us in singing.wav',
             'music/c15 - Twelve Days of Christmas.wav',

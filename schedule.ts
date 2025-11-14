@@ -33,4 +33,18 @@ export let schedule: { [year: string]: ScheduleEntry[] } = {
         { date: '2024-12-07', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
         { date: '2024-12-08', times: ['17:00', '18:30'], studio: 'AIM' },
     ],
+    '2025': [
+        { date: '2025-11-14', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2025-11-15', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2025-11-16', times: ['17:00', '18:30'], studio: 'DDS' },
+        { date: '2025-11-21', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2025-11-22', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2025-11-23', times: ['17:00', '18:30'], studio: 'DDS' },
+        { date: '2025-11-28', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2025-11-29', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2025-11-30', times: ['17:00', '18:30'], studio: 'AIM' },
+        { date: '2025-12-05', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2025-12-06', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2025-12-07', times: ['17:00', '18:30'], studio: 'AIM' },
+    ],
 };
