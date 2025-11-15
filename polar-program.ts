@@ -4,11 +4,15 @@ import { Player } from './player';
 import { debugLog } from './debug';
 import * as dateFns from 'date-fns';
 
-async function waitForMoving(getState: () => Promise<IGPSState>, moving: boolean) {
-    return await withStateAsync({ waitForMoving: moving }, async () => {
+async function waitFor(
+    getState: () => Promise<IGPSState>,
+    name: keyof IGPSState,
+    value: boolean,
+) {
+    return await withStateAsync({ waitFor: [name, value] }, async () => {
         while (true) {
             const state = await getState();
-            if (state.moving == moving) return state;
+            if (state[name] == value) return state;
         }
     });
 }
@@ -127,17 +131,17 @@ export async function polarProgram(
 
         await playing.wait();
 
-        await waitForMoving(getState, false);
+        await waitFor(getState, 'moving', false);
         await play(['music/c08a - Brief station stop.wav']).wait();
-        await waitForMoving(getState, true);
+        await waitFor(getState, 'movingNorth', true);
         await waitForTrigger(getState, 'npMusicStart');
         await play([
             'music/c09 - Believe (1).wav',
             'music/c10 - We Wish You a Merry Christmas (1).wav',
         ]).wait();
-        await waitForMoving(getState, false);
+        await waitFor(getState, 'movingNorth', false);
         await play(['music/c10a - Thousands of caribou.wav']).wait();
-        await waitForMoving(getState, true);
+        await waitFor(getState, 'movingSouth', true);
         await play([
             'music/c11 - Rudolph the Red-Nosed Reindeer.wav',
             'music/c12 - Frosty the Snowman.wav',

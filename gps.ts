@@ -68,6 +68,8 @@ export interface IGPSState {
     time: Date;
     speed: number;
     moving: boolean;
+    movingNorth: boolean;
+    movingSouth: boolean;
     triggerDistances: { [x: string]: number };
 }
 
@@ -106,6 +108,13 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
         for (let spd of avgSpeedSamples) sum += spd;
         return sum / avgSpeedSamples.length;
     }
+    let distanceDeltaSamples: number[] = [];
+    function distanceDelta(distance: number) {
+        if (distanceDeltaSamples.length >= 10)
+            distanceDeltaSamples = distanceDeltaSamples.slice(1);
+        distanceDeltaSamples.push(distance);
+        return distance - distanceDeltaSamples[0];
+    }
 
     let moving = false;
 
@@ -141,6 +150,7 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
                 units: 'meters',
             });
             const curDistance = snapped.properties.location! * feetPerMeter;
+            const delta = distanceDelta(curDistance);
 
             const triggerDistances = mapValues(
                 triggers,
@@ -151,6 +161,8 @@ export function openGPSStream(stream: fs.ReadStream, options: IOptions = {}) {
                 time,
                 speed,
                 moving,
+                movingNorth: moving && delta > 0,
+                movingSouth: moving && delta < 0,
                 triggerDistances,
             });
         }
