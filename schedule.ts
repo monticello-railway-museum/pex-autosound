@@ -46,5 +46,6 @@ export let schedule: { [year: string]: ScheduleEntry[] } = {
         { date: '2025-12-05', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
         { date: '2025-12-06', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
         { date: '2025-12-07', times: ['17:00', '18:30'], studio: 'AIM' },
+        { date: '2025-12-13', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
     ],
 };
