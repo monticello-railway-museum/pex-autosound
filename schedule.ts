@@ -48,4 +48,18 @@ export let schedule: { [year: string]: ScheduleEntry[] } = {
         { date: '2025-12-07', times: ['17:00', '18:30'], studio: 'AIM' },
         { date: '2025-12-13', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
     ],
+    '2026': [
+        { date: '2026-11-13', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2026-11-14', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2026-11-15', times: ['17:00', '18:30'], studio: 'AIM' },
+        { date: '2026-11-20', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2026-11-21', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2026-11-22', times: ['17:00', '18:30'], studio: 'DDS' },
+        { date: '2026-11-27', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2026-11-28', times: ['17:00', '18:30', '20:00'], studio: 'AIM' },
+        { date: '2026-11-29', times: ['17:00', '18:30'], studio: 'AIM' },
+        { date: '2026-12-04', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2026-12-05', times: ['17:00', '18:30', '20:00'], studio: 'DDS' },
+        { date: '2026-12-06', times: ['17:00', '18:30'], studio: 'DDS' },
+    ],
 };
